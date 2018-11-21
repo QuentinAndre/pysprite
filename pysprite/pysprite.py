@@ -24,7 +24,7 @@ class Sprite:
         self.mu_prec = mu_prec
         self.sd_prec = sd_prec
         self.n_items = n_items
-        self.data = self._init_data()
+
 
         if n_items == 1:
             self.granularity = 1
@@ -37,6 +37,8 @@ class Sprite:
 
         if not self._grim_test_valid():
             raise ValueError("GRIM Failed: The SPRITE method cannot be applied.")
+
+        self.data = self._init_data()
 
     def _validate_restrictions(self, restrictions, min_val, max_val):
         exclusions = [k for k, v in restrictions.items() if v == 0]
