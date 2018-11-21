@@ -18,13 +18,18 @@ The current library re-implements the features of the original code in Python 3.
  in a more flexible way). 
  * A test suite to facilitate development.
 
+# III. Installation
+pysprite is available on Pypi:
 
-# III. Usage
+`pip install pysprite`
+
+# IV. Usage
 
 ## 1. Initialization
 In pysprite, a Sprite object must first be initialized as follow:
 
 ```python
+from pysprite import Sprite
 npart = 20
 m = 3.02
 sd = 2.14
@@ -109,7 +114,7 @@ When restrictions are specified, the `init_method` argument `find_possible_distr
 `find_possible_distributions()` has no effect. The distribution will always be initialized at random, such that it
 conforms to the restrictions.
 
-# IV. Development
+# V. Development
 
 ## 1. Up-and-coming features
 

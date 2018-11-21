@@ -1,7 +1,6 @@
 import numpy as np
 import math
 
-
 class Sprite:
     def __init__(self, n, mu, sd, mu_prec, sd_prec, min_val, max_val, restrictions=None, n_items=1):
 
