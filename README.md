@@ -114,6 +114,38 @@ When restrictions are specified, the `init_method` argument `find_possible_distr
 `find_possible_distributions()` has no effect. The distribution will always be initialized at random, such that it
 conforms to the restrictions.
 
+## 5. Advanced usage: Multi-scale items.
+pysprite supports distributions obtained from multi-scale items. For instance, assume that all participants rated how
+beautiful three birds are (on a scale from 1 to 7), and that the dependent variable is the average of those two ratings.
+
+You can specify that the scale had two items using the `n_items` keyword:
+
+```python
+npart = 32
+m = 2.35
+sd = 1.7
+m_prec = 2
+sd_prec = 2
+min_val = 1
+max_val = 7
+
+s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items=3)
+```
+
+Under the hood, pysprite will:
+* Construct a response scale including non-integer values: [1, 4/3, 5/3, 6/3, ..., 20/3, 21/3]. 
+* Perform the GRIM check, taking into account that the scale has more granularity than a single item scale.
+* Check if this scale can produce a distribution with the reported summary statistics.
+
+# V. Changelog
+
+## 1.1.0: Master
+* Support for multi-item scales.
+
+## 1.0.0: Initial release
+* Support for scales of one item only.
+
+
 # V. Development
 
 ## 1. Up-and-coming features

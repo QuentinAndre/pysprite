@@ -520,10 +520,3 @@ class Sprite:
         """
         self.data[value] -= self.granularity
         self.data[value - self.granularity] += self.granularity
-
-
-if __name__ == "__main__":
-    npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items = [32, 2.35, 1.7, 2, 2, 0, 6, 3]
-    s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items=n_items)
-    results = s.find_possible_distribution()
-    print(results)
