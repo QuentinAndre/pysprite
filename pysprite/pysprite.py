@@ -24,19 +24,21 @@ class Sprite:
         self.mu_prec = mu_prec
         self.sd_prec = sd_prec
         self.n_items = n_items
-        self.data = self._init_data()
 
         if n_items == 1:
             self.granularity = 1
             self.scale = list(np.arange(min_val, max_val))
+        elif n_items == 2:
+            self.granularity = 1 / n_items
+            self.scale = list(np.arange(min_val, max_val, self.granularity))
         else:
             raise ValueError(
                 "SPRITE does not support scales with more than 2 items for now.")  # TODO: Implement more than one item.
-            # self.granularity = 1 / n_items
-            # self.scale = list(np.arange(min_val, max_val, self.granularity))
 
         if not self._grim_test_valid():
             raise ValueError("GRIM Failed: The SPRITE method cannot be applied.")
+
+        self.data = self._init_data()
 
     def _validate_restrictions(self, restrictions, min_val, max_val):
         exclusions = [k for k, v in restrictions.items() if v == 0]

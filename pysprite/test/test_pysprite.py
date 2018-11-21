@@ -73,6 +73,14 @@ values_must_exclude = [[35, 2.31, 1.62, 2, 2, 0, 6, {4: 0}], [35, 3.46, 2.55, 2,
 values_GRIMfail = [[20, 4.21, 2.12, 2, 1, 0, 10], [20, 4.23, 2.12, 2, 2, 0, 10], [10, 8, 2.12, 2, 2, 0, 7],
                    [10, 0.1, 2.12, 2, 2, 1, 7], [10, -6, 2.12, 2, 2, -5, 5], [10, 6, 2.12, 2, 2, -5, 5]]
 
+values_twoitems = [[26, 3.29, 2.15, 2, 2, 0, 7, 2], [20, 5.65, 2.53, 2, 2, 0, 9, 2], [30, 3.97, 2.83, 2, 2, 0, 8, 2],
+                   [45, 2.86, 1.83, 2, 2, 0, 6, 2], [25, 3.3, 2.61, 2, 2, 0, 8, 2], [46, 3.11, 2.09, 2, 2, 0, 7, 2],
+                   [26, 3.21, 1.99, 2, 2, 0, 7, 2], [26, 2.83, 1.89, 2, 2, 0, 6, 2], [46, 4.43, 2.35, 2, 2, 0, 8, 2],
+                   [48, 3.39, 1.89, 2, 2, 0, 6, 2], [34, 4.0, 2.45, 2, 2, 0, 7, 2], [40, 3.7, 2.33, 2, 2, 0, 8, 2],
+                   [40, 2.85, 1.96, 2, 2, 0, 6, 2], [37, 4.12, 2.31, 2, 2, 0, 8, 2], [25, 5.18, 2.71, 2, 2, 0, 9, 2],
+                   [41, 3.79, 2.16, 2, 2, 0, 7, 2], [49, 3.17, 2.15, 2, 2, 0, 7, 2], [48, 4.72, 2.63, 2, 2, 0, 9, 2],
+                   [43, 3.42, 2.21, 2, 2, 0, 7, 2], [34, 2.34, 1.78, 2, 2, 0, 7, 2]]
+
 
 @pytest.mark.parametrize("npart, m, sd, m_prec, sd_prec, min_val, max_val", values_success)
 def test_success(npart, m, sd, m_prec, sd_prec, min_val, max_val):
@@ -81,6 +89,7 @@ def test_success(npart, m, sd, m_prec, sd_prec, min_val, max_val):
     """
     s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val)
     assert (s.find_possible_distribution()[0] == "Success")
+
 
 @pytest.mark.parametrize("npart, m, sd, m_prec, sd_prec, min_val, max_val", values_couldfail)
 def test_against_SPRITE(npart, m, sd, m_prec, sd_prec, min_val, max_val):
@@ -91,6 +100,7 @@ def test_against_SPRITE(npart, m, sd, m_prec, sd_prec, min_val, max_val):
     answer_pysprite = (s.find_possible_distribution()[0] == "Success")
     answer_psprite = (SPRITE(m, m_prec, sd, sd_prec, npart, min_val, max_val)[0] == "solution")
     assert (answer_psprite == answer_pysprite)
+
 
 @pytest.mark.parametrize("npart, m, sd, m_prec, sd_prec, min_val, max_val, restrictions", values_must_include)
 def test_inclusions(npart, m, sd, m_prec, sd_prec, min_val, max_val, restrictions):
@@ -103,6 +113,7 @@ def test_inclusions(npart, m, sd, m_prec, sd_prec, min_val, max_val, restriction
     match_count = [values_dist.get(k) == v for k, v in restrictions.items()]
     assert all(match_count)
 
+
 @pytest.mark.parametrize("npart, m, sd, m_prec, sd_prec, min_val, max_val, restrictions", values_must_exclude)
 def test_exclusions(npart, m, sd, m_prec, sd_prec, min_val, max_val, restrictions):
     """
@@ -114,6 +125,7 @@ def test_exclusions(npart, m, sd, m_prec, sd_prec, min_val, max_val, restriction
     match = [dict_values.get(k, 0) == v for k, v in restrictions.items()]
     assert all(match)
 
+
 @pytest.mark.parametrize("npart, m, sd, m_prec, sd_prec, min_val, max_val", values_GRIMfail)
 def test_GRIMfail(npart, m, sd, m_prec, sd_prec, min_val, max_val):
     """
@@ -121,3 +133,12 @@ def test_GRIMfail(npart, m, sd, m_prec, sd_prec, min_val, max_val):
     """
     with pytest.raises(ValueError):
         Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val)
+
+
+@pytest.mark.parametrize("npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items", values_twoitems)
+def test_twoitems(npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items):
+    """
+    Validate that pysprite will fail initialization when the parameters are incorrect.
+    """
+    s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items=n_items)
+    assert (s.find_possible_distribution()[0] == "Success")
