@@ -86,7 +86,7 @@ With this method, `possible_dists` is a tuple of `(outcome, dists, k)` where:
 * `dists`: A list of suitable distributions (or an empty list of none was found).
 * `k`: The number of suitable distributions found.
 
-## 4. Advanced Usage: Specifying Restrictions
+## 4. Advanced usage: Specifying Restrictions
 In pysprite, restrictions are a dictionary of `{values: counts}` that must be present in the candidate distribution.
 
 For instance, we want to specify that participants answered on a scale from 0 to 8, but that none of them answered `4`,
