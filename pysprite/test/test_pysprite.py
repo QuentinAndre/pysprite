@@ -81,6 +81,14 @@ values_twoitems = [[26, 3.29, 2.15, 2, 2, 0, 7, 2], [20, 5.65, 2.53, 2, 2, 0, 9,
                    [41, 3.79, 2.16, 2, 2, 0, 7, 2], [49, 3.17, 2.15, 2, 2, 0, 7, 2], [48, 4.72, 2.63, 2, 2, 0, 9, 2],
                    [43, 3.42, 2.21, 2, 2, 0, 7, 2], [34, 2.34, 1.78, 2, 2, 0, 7, 2]]
 
+values_threeitems = [[39, 3.72, 2.16, 2, 2, 0, 9, 3], [38, 4.85, 2.73, 2, 2, 0, 9, 3], [27, 3.07, 1.6, 2, 2, 0, 6, 3],
+                     [45, 4.5, 2.49, 2, 2, 0, 9, 3], [24, 3.92, 1.87, 2, 2, 0, 7, 3], [25, 4.0, 2.64, 2, 2, 0, 9, 3],
+                     [33, 4.02, 1.68, 2, 2, 0, 7, 3], [32, 4.93, 2.23, 2, 2, 0, 9, 3], [26, 2.29, 1.39, 2, 2, 0, 5, 3],
+                     [39, 2.27, 1.58, 2, 2, 0, 5, 3], [31, 3.23, 1.59, 2, 2, 0, 6, 3], [46, 3.59, 2.35, 2, 2, 0, 8, 3],
+                     [25, 3.12, 2.11, 2, 2, 0, 7, 3], [38, 4.08, 2.41, 2, 2, 0, 8, 3], [38, 4.14, 2.57, 2, 2, 0, 9, 3],
+                     [34, 4.68, 2.59, 2, 2, 0, 9, 3], [40, 4.7, 2.5, 2, 2, 0, 9, 3], [25, 2.96, 1.81, 2, 2, 0, 6, 3],
+                     [37, 2.34, 1.31, 2, 2, 0, 5, 3], [32, 2.35, 1.7, 2, 2, 0, 6, 3]]
+
 
 @pytest.mark.parametrize("npart, m, sd, m_prec, sd_prec, min_val, max_val", values_success)
 def test_success(npart, m, sd, m_prec, sd_prec, min_val, max_val):
@@ -137,6 +145,15 @@ def test_GRIMfail(npart, m, sd, m_prec, sd_prec, min_val, max_val):
 
 @pytest.mark.parametrize("npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items", values_twoitems)
 def test_twoitems(npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items):
+    """
+    Validate that pysprite will fail initialization when the parameters are incorrect.
+    """
+    s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items=n_items)
+    assert (s.find_possible_distribution()[0] == "Success")
+
+
+@pytest.mark.parametrize("npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items", values_threeitems)
+def test_threeitems(npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items):
     """
     Validate that pysprite will fail initialization when the parameters are incorrect.
     """
