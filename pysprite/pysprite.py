@@ -1,7 +1,7 @@
 import numpy as np
 import math
 from fractions import Fraction
-from statistics import pstdev
+from statistics import stdev
 
 
 class Sprite:
@@ -71,8 +71,8 @@ class Sprite:
                 init_method))
 
         # Compute upper and lower bounds of the sum of values
-        lower = round(self.mu - .5 / (10 ** self.mu_prec), self.mu_prec + 1)
-        upper = round(self.mu + .5 / (10 ** self.mu_prec), self.mu_prec + 1)
+        lower = self.mu - .5 / (10 ** self.mu_prec)
+        upper = self.mu + .5 / (10 ** self.mu_prec)
 
         if lower < 0:
             l_bound = int(lower * self.n)
@@ -182,7 +182,7 @@ class Sprite:
                     while sum(dist) > i:
                         dist.sort(reverse=True)
                         dist[0] = dist[0] - self.granularity
-                local_sd = pstdev(dist)
+                local_sd = stdev(dist)
                 if local_sd < minvar:  # Keep the result if it has less variance than another result.
                     minvar = local_sd
                     minvar_dist = dist
@@ -238,7 +238,7 @@ class Sprite:
                     dist[-1] = dist[-1] + diff
                 else:
                     dist[0] = dist[0] + diff
-                localvar = pstdev(dist)
+                localvar = stdev(dist)
                 if localvar > maxvar:  # Keep the result if it has higher variance than another result.
                     maxvar = localvar
                     maxvar_dist = dist
@@ -284,7 +284,7 @@ class Sprite:
         target_sd = self.sd
         self.data = self._init_data(init_method)
         for i in range(max_iter):
-            current_sd = round(pstdev(self._dict_to_array()), 2)
+            current_sd = round(stdev(self._dict_to_array()), 2)
             if current_sd == target_sd:
                 return ["Success", self._dict_to_array(), current_sd]
             elif target_sd < current_sd:
@@ -310,7 +310,7 @@ class Sprite:
         k = 0
         possible = []
         for i in range(max_iter):
-            current_sd = round(pstdev(self._dict_to_array()), 2)
+            current_sd = round(stdev(self._dict_to_array()), 2)
             if current_sd == target_sd:
                 k += 1
                 possible.append(self._dict_to_array())
@@ -520,3 +520,9 @@ class Sprite:
         """
         self.data[value] -= self.granularity
         self.data[value - self.granularity] += self.granularity
+
+
+if __name__ == "__main__":
+    npart, m, sd, m_prec, sd_prec, min_val, max_val =[39, 37.21, 20.01, 2, 2, -2, 76]
+    s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val)
+    print(s.find_possible_distribution())
