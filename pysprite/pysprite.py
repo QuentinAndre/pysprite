@@ -1,6 +1,19 @@
 import numpy as np
 import math
 
+def deviation(data, u):
+    return (sum([(i - u) ** 2 for i in data]) / (len(data) - 1)) ** .5
+
+def dict_to_array(dicti):
+    """
+    A utility function to convert dictionaries into arrays
+    :param dicti: A dictionary of {value: n_occurrences}
+    :return: An array of values
+    """
+    vals = [i for i in dicti.keys()]
+    counts = [i for _, i in dicti.items()]
+    return np.repeat(vals, counts)
+
 class Sprite:
     def __init__(self, n, mu, sd, mu_prec, sd_prec, min_val, max_val, restrictions=None, n_items=1):
 
@@ -28,7 +41,7 @@ class Sprite:
 
         if n_items == 1:
             self.granularity = 1
-            self.scale = list(np.arange(min_val, max_val))
+            self.scale = list(np.arange(min_val, max_val+1))
         else:
             raise ValueError(
                 "SPRITE does not support scales with more than 2 items for now.")  # TODO: Implement more than one item.
@@ -178,7 +191,7 @@ class Sprite:
                     while sum(dist) > i:
                         dist.sort(reverse=True)
                         dist[0] = dist[0] - self.granularity
-                local_sd = np.std(dist, ddof=1)
+                local_sd = deviation(dist, local_mu)
                 if local_sd < minvar:  # Keep the result if it has less variance than another result.
                     minvar = local_sd
                     minvar_dist = dist
@@ -234,7 +247,7 @@ class Sprite:
                     dist[-1] = dist[-1] + diff
                 else:
                     dist[0] = dist[0] + diff
-                localvar = np.std(dist, ddof=1)
+                localvar = deviation(dist, local_mu)
                 if localvar > maxvar:  # Keep the result if it has higher variance than another result.
                     maxvar = localvar
                     maxvar_dist = dist
@@ -279,15 +292,17 @@ class Sprite:
 
         target_sd = self.sd
         self.data = self._init_data(init_method)
+        dist = dict_to_array(self.data)
+        mu = sum(dist)/len(dist)
         for i in range(max_iter):
-            current_sd = np.round(np.std(self._dict_to_array(), ddof=1), 2)
+            current_sd = np.round(deviation(dict_to_array(self.data), mu), 2)
             if current_sd == target_sd:
-                return ["Success", self._dict_to_array(), current_sd]
+                return ["Success", dict_to_array(self.data), current_sd]
             elif target_sd < current_sd:
                 self._decrease_var()
             else:
                 self._increase_var()
-        return ["Failure", self._dict_to_array(), current_sd]
+        return ["Failure", dict_to_array(self.data), current_sd]
 
     def find_possible_distributions(self, n_dists=10, init_method="maxvar", max_iter=100000):
         """
@@ -303,13 +318,15 @@ class Sprite:
 
         target_sd = self.sd
         self.data = self._init_data(init_method)
+        dist = dict_to_array(self.data)
+        mu = sum(dist)/len(dist)
         k = 0
         possible = []
         for i in range(max_iter):
-            current_sd = np.round(np.std(self._dict_to_array(), ddof=1), 2)
+            current_sd = np.round(deviation(dict_to_array(self.data), mu), 2)
             if current_sd == target_sd:
                 k += 1
-                possible.append(self._dict_to_array())
+                possible.append(dict_to_array(self.data))
                 if k == n_dists:
                     return ["Success", possible, k]
                 else:
@@ -489,16 +506,6 @@ class Sprite:
         self._decrement(will_decrement)
         return True
 
-    def _dict_to_array(self):
-        """
-        A utility function to convert dictionaries into arrays
-        :param array: A dictionary of {value: n_occurrences}
-        :return: An array of values
-        """
-        vals = [i for i in self.data.keys()]
-        counts = [i for _, i in self.data.items()]
-        return np.repeat(vals, counts)
-
     def _increment(self, value):
         """
         Increment the given value in the data
@@ -518,13 +525,13 @@ class Sprite:
         self.data[value - self.granularity] += self.granularity
 
 if __name__ == "__main__":
-    npart = 20
-    m = 3.05
-    sd = 2.14
+    npart = 39
+    m = 37.21
+    sd = 20.01
     m_prec = 2
     sd_prec = 2
-    min_val = 1
-    max_val = 7
+    min_val = -2
+    max_val = 76
     s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val)
-    results = s.find_possible_distributions()
+    results = s.find_possible_distribution()
     print(results)
