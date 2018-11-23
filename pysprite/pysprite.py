@@ -18,6 +18,19 @@ def dict_to_array(dicti):
     return np.repeat(vals, counts)
 
 
+def deviation(data, u):
+    return (sum([(i - u) ** 2 for i in data]) / (len(data) - 1)) ** .5
+
+def dict_to_array(dicti):
+    """
+    A utility function to convert dictionaries into arrays
+    :param dicti: A dictionary of {value: n_occurrences}
+    :return: An array of values
+    """
+    vals = [i for i in dicti.keys()]
+    counts = [i for _, i in dicti.items()]
+    return np.repeat(vals, counts)
+
 class Sprite:
     def __init__(self, n, mu, sd, mu_prec, sd_prec, min_val, max_val, restrictions=None, n_items=1):
 
@@ -42,12 +55,14 @@ class Sprite:
         self.sd_prec = sd_prec
         self.n_items = n_items
 
+
         if n_items == 1:
             self.granularity = 1
             self.scale = list(np.arange(min_val, max_val + 1))
         elif n_items == 2:
             self.granularity = 1 / n_items
             self.scale = list(np.arange(min_val, max_val + self.granularity, self.granularity))
+
         else:
             self.granularity = Fraction(1, n_items)  # Fractions to avoid precision errors. Slower but failsafe.
             self.scale = list(np.arange(min_val, max_val + self.granularity, self.granularity))
@@ -300,7 +315,9 @@ class Sprite:
         target_sd = self.sd
         self.data = self._init_data(init_method)
         dist = dict_to_array(self.data)
+        
         mu = sum(dist) / len(dist)
+
         for i in range(max_iter):
             current_sd = np.round(deviation(dict_to_array(self.data), mu), 2)
             if current_sd == target_sd:
@@ -326,11 +343,13 @@ class Sprite:
         target_sd = self.sd
         self.data = self._init_data(init_method)
         dist = dict_to_array(self.data)
+
         mu = sum(dist) / len(dist)
         k = 0
         possible = []
         for i in range(max_iter):
             current_sd = round(deviation(dict_to_array(self.data), mu), 2)
+
             if current_sd == target_sd:
                 k += 1
                 possible.append(dict_to_array(self.data))
@@ -533,8 +552,10 @@ class Sprite:
 
 
 if __name__ == "__main__":
+
     npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items, method = [40, 4.85, 2.73, 2, 2, 0, 9, 1, 'random']
     npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items, method = [38, 4.85, 2.73, 2, 2, 0, 9, 3, 'random']
     s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items=n_items)
     results = s.find_possible_distribution(init_method=method)
+
     print(results)
