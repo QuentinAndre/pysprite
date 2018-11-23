@@ -139,7 +139,13 @@ Under the hood, pysprite will:
 
 # V. Changelog
 
-## 1.1.0: Master
+## 1.1.2: Master
+* Fixed a bug that could cause the "maxvar" initialization procedure to crash
+* Improved numerical precision
+* Speed-up of variance comparisons.
+
+
+## 1.1.0
 * Support for multi-item scales.
 
 ## 1.0.0: Initial release

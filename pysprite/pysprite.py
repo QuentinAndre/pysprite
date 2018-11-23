@@ -1,7 +1,21 @@
 import numpy as np
 import math
 from fractions import Fraction
-from statistics import stdev
+
+
+def deviation(data, u):
+    return (sum([(i - u) ** 2 for i in data]) / (len(data) - 1)) ** .5
+
+
+def dict_to_array(dicti):
+    """
+    A utility function to convert dictionaries into arrays
+    :param dicti: A dictionary of {value: n_occurrences}
+    :return: An array of values
+    """
+    vals = [i for i in dicti.keys()]
+    counts = [i for _, i in dicti.items()]
+    return np.repeat(vals, counts)
 
 
 class Sprite:
@@ -35,7 +49,7 @@ class Sprite:
             self.granularity = 1 / n_items
             self.scale = list(np.arange(min_val, max_val + self.granularity, self.granularity))
         else:
-            self.granularity = Fraction(1, n_items)  # Have to use fractions to avoid precision errors. Slower.
+            self.granularity = Fraction(1, n_items)  # Fractions to avoid precision errors. Slower but failsafe.
             self.scale = list(np.arange(min_val, max_val + self.granularity, self.granularity))
 
         if not self._grim_test_valid():
@@ -84,7 +98,7 @@ class Sprite:
             u_bound = int(upper * self.n)
 
         if self._has_restrictions:
-            data = self._init_restricted_data(u_bound)
+            data = self._init_restricted_data(l_bound, u_bound)
         else:
             if init_method == "minvar":
                 data = self._init_minvar_data(l_bound, u_bound)
@@ -94,10 +108,11 @@ class Sprite:
                 data = self._init_random_data(l_bound, u_bound)
         return data
 
-    def _init_restricted_data(self, sum_values):
+    def _init_restricted_data(self, l_bound, u_bound):
         """
         Initialize a distribution with restrictions. This function is not deterministic.
-        :param sum_values: The sum of values in the distribution
+        :param l_bound: The lower bound of the sum of values in the distribution
+        :param u_bound: The upper bound of the sum of values in the distribution
         :return: A random distribution with restrictions.
         """
         n = self.n
@@ -105,7 +120,8 @@ class Sprite:
         scale = self.scale
         maxscale = max(scale)
         minscale = min(scale)
-        total_left = sum_values
+        target_sum = np.random.choice(range(l_bound, u_bound + 1))
+        total_left = target_sum
         dist = []
         for k, v in self.restrictions.items():  # Create a distribution in accordance with all the restrictions
             dist += [k] * v
@@ -123,9 +139,9 @@ class Sprite:
             candidate = val + self.granularity  # Increment this unrestricted value until another valid value is found
             while (candidate in self.restricted_values) and (candidate <= maxscale):
                 candidate += self.granularity
-            if sum(dist) + candidate - val <= sum_values:  # If it is not too large, add it.
+            if sum(dist) + candidate - val <= target_sum:  # If it is not too large, add it.
                 dist[ix] = candidate
-            if sum(dist) == sum_values:
+            if sum(dist) == target_sum:
                 return self._array_to_dict(dist)
 
         raise ValueError("Could not find a suitable distribution given the restrictions.")
@@ -141,12 +157,12 @@ class Sprite:
         scale = self.scale
         maxscale = max(scale)
         target_sum = np.random.choice(range(l_bound, u_bound + 1))  # Choose a possible sum at random.
-        dist = np.array(n * [min(scale)])
+        dist = n * [min(scale)]
         r = np.arange(n)
         while sum(dist) != target_sum:
             ix = np.random.choice(r)
             if (dist[ix] + self.granularity) <= maxscale:
-                dist[ix] += self.granularity
+                dist[ix] = dist[ix] + self.granularity
         return self._array_to_dict(dist)
 
     def _init_minvar_data(self, l_bound, u_bound):
@@ -168,7 +184,7 @@ class Sprite:
                 while sum(dist) > l_bound:
                     dist.sort(reverse=True)
                     dist[0] -= self.granularity
-            return dist
+            return self._array_to_dict(dist)
         else:  # Multiple totals are possible: for all possible values of the total, repeat procedure above
             minvar = 1000
             for i in range(l_bound, u_bound + 1):
@@ -182,7 +198,7 @@ class Sprite:
                     while sum(dist) > i:
                         dist.sort(reverse=True)
                         dist[0] = dist[0] - self.granularity
-                local_sd = stdev(dist)
+                local_sd = deviation(dist, local_mu)
                 if local_sd < minvar:  # Keep the result if it has less variance than another result.
                     minvar = local_sd
                     minvar_dist = dist
@@ -238,7 +254,7 @@ class Sprite:
                     dist[-1] = dist[-1] + diff
                 else:
                     dist[0] = dist[0] + diff
-                localvar = stdev(dist)
+                localvar = deviation(dist, local_mu)
                 if localvar > maxvar:  # Keep the result if it has higher variance than another result.
                     maxvar = localvar
                     maxvar_dist = dist
@@ -283,15 +299,17 @@ class Sprite:
 
         target_sd = self.sd
         self.data = self._init_data(init_method)
+        dist = dict_to_array(self.data)
+        mu = sum(dist) / len(dist)
         for i in range(max_iter):
-            current_sd = round(stdev(self._dict_to_array()), 2)
+            current_sd = np.round(deviation(dict_to_array(self.data), mu), 2)
             if current_sd == target_sd:
-                return ["Success", self._dict_to_array(), current_sd]
+                return ["Success", dict_to_array(self.data), current_sd]
             elif target_sd < current_sd:
                 self._decrease_var()
             else:
                 self._increase_var()
-        return ["Failure", self._dict_to_array(), current_sd]
+        return ["Failure", dict_to_array(self.data), current_sd]
 
     def find_possible_distributions(self, n_dists=10, init_method="maxvar", max_iter=100000):
         """
@@ -307,13 +325,15 @@ class Sprite:
 
         target_sd = self.sd
         self.data = self._init_data(init_method)
+        dist = dict_to_array(self.data)
+        mu = sum(dist) / len(dist)
         k = 0
         possible = []
         for i in range(max_iter):
-            current_sd = round(stdev(self._dict_to_array()), 2)
+            current_sd = round(deviation(dict_to_array(self.data), mu), 2)
             if current_sd == target_sd:
                 k += 1
-                possible.append(self._dict_to_array())
+                possible.append(dict_to_array(self.data))
                 if k == n_dists:
                     return ["Success", possible, k]
                 else:
@@ -493,16 +513,6 @@ class Sprite:
         self._decrement(will_decrement)
         return True
 
-    def _dict_to_array(self):
-        """
-        A utility function to convert dictionaries into arrays
-        :param array: A dictionary of {value: n_occurrences}
-        :return: An array of values
-        """
-        vals = [i for i in self.data.keys()]
-        counts = [i for _, i in self.data.items()]
-        return np.repeat(vals, counts)
-
     def _increment(self, value):
         """
         Increment the given value in the data
@@ -523,6 +533,8 @@ class Sprite:
 
 
 if __name__ == "__main__":
-    npart, m, sd, m_prec, sd_prec, min_val, max_val =[39, 37.21, 20.01, 2, 2, -2, 76]
-    s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val)
-    print(s.find_possible_distribution())
+    npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items, method = [40, 4.85, 2.73, 2, 2, 0, 9, 1, 'random']
+    npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items, method = [38, 4.85, 2.73, 2, 2, 0, 9, 3, 'random']
+    s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items=n_items)
+    results = s.find_possible_distribution(init_method=method)
+    print(results)
