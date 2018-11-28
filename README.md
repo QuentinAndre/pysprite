@@ -116,7 +116,7 @@ conforms to the restrictions.
 
 ## 5. Advanced usage: Multi-scale items.
 pysprite supports distributions obtained from multi-scale items. For instance, assume that all participants rated how
-beautiful three birds are (on a scale from 1 to 7), and that the dependent variable is the average of those two ratings.
+beautiful three birds are (on a scale from 1 to 7), and that the dependent variable is the average of those three ratings.
 
 You can specify that the scale had two items using the `n_items` keyword:
 
