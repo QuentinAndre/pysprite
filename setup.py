@@ -18,7 +18,7 @@ setup(
 
     long_description=open('README.md', encoding="utf-8").read(),
 
-    install_requires=["numpy"],
+    install_requires=["numpy", "pandas", "matplotlib", "seaborn"],
 
     extras_require={
         "dev": ['pytest']

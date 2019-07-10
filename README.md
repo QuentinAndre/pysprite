@@ -23,7 +23,7 @@ pysprite is available on Pypi:
 
 `pip install pysprite`
 
-# IV. Usage
+# IV. Using pysprite
 
 ## 1. Initialization
 In pysprite, a Sprite object must first be initialized as follow:
@@ -137,7 +137,106 @@ Under the hood, pysprite will:
 * Perform the GRIM check, taking into account that the scale has more granularity than a single item scale.
 * Check if this scale can produce a distribution with the reported summary statistics.
 
-# V. Changelog
+# V. Utilities
+
+The library also include some utilities that can be useful to establish a diagnostic of pathological data.
+
+## 1. The `grim()` function
+
+A simple implementation of the GRIM test.
+
+```python
+from pysprite import grim
+npart = 32 # 32 participants
+m = 2.35 # Mean
+prec = 2 # Decimal precision of the mean
+n_items = 1 # The mean was computed from a single item measure
+possible = grim(npart, m, prec=prec, n_items=n_items) # Returns True or False
+```
+
+## 2. The `GrimSearch` object
+
+It is frustrating when a paper reports the means of multiple variables for multiple cells, but omits the sample size 
+per cell. In this case, the only solution was to run the GRIM test multiple times over multiple combination of cell 
+sizes, and to check if one (or multiple) solutions were possible. 
+
+GrimSearch automates this search procedure, and automatically returns the solution(s)!
+
+Let's take the following example: 
+
+* A study with three conditions: "Control", "Guilt", and "Shame". 
+* For each condition, the authors report the means score on two items: "N_Purchases" and "Excitement".
+* We know the total N: 180
+ 
+```python
+from pysprite import GrimSearch
+
+n = 180 # 180 participants in total
+
+# Matrix of means: One row per cell, one column per variable.
+mus = [[6.43, 2.63], # N_Purchases and Excitement for "Control"
+         [2.71, 6.04], # ... for "Guilt"
+         [2.54, 2.09]] # ... for "Shame"
+
+precs = [2, 2] # Decimal precision of the variables
+
+n_items = [1, 1] # The mean of both variables was computed from a single item measure
+
+max_diff = 10 # To reduce the number of cell sizes to consider, let's set the maximum difference in N per cell at 10.
+varnames =["N_Purchases", "Excitement"]
+cellnames = ["Control", "Guilt", "Shame"]
+
+gs = GrimSearch(n, mus, precs, n_items, max_diff, varnames, cellnames)
+```
+
+We have initialized the procedure, now let's see if it can find a solution.
+
+```python
+gs.find_solutions()
+# No solution!
+```
+
+Assuming a sample size per cell between 55 and 64, we cannot find a solution. Let's get a better idea of how close (far)
+we are from a solution by plotting the results:
+ 
+```python
+gs.plot_grim_checks(plot_kwargs={"figsize":(15, 5)})
+```
+![GrimChecks](Images/GrimChecks.PNG)
+
+In this plot, each column corresponds to combination of cell sizes that is consistent with the total N, and each row to
+a cell/variable pair. A pale (vs. dark) blue rectangle means that the cell/variable pair is GRIM-inconsistent 
+(vs. GRIM-inconsistent) given the cell size. A solution would appear as a full row of dark blue rectangles:  here, we 
+do not see any.
+
+If there are too many cell size combinations, you can choose to only plot those in which more than X variable/pairs are
+GRIM-consistent, using the `threshold` keyword.
+
+```python
+gs.plot_grim_checks(threshold=4, plot_kwargs={"figsize":(10, 5)})
+```
+![GrimChecks](Images/GrimChecksRestr.PNG)
+
+Finally, you can export this summary of GRIM checks to a dataframe:
+
+```python
+gs.summarize_grim_checks()
+```
+
+|   Combination       |  Cell Name       |  Cell Size  |  Variable           | Valid   |
+|----------|---------|----|-------------|-----|
+| 55-61-64 | Control | 55 | N_Purchases | 0.0 |
+| 55-61-64 | Guilt   | 61 | N_Purchases | 0.0 |
+| 55-61-64 | Shame   | 64 | N_Purchases | 0.0 |
+| 55-61-64 | Control | 55 | Excitement  | 0.0 |
+| 55-61-64 | Guilt   | 61 | Excitement  | 0.0 |
+| 55-61-64 | Shame   | 64 | Excitement  | 1.0 |
+| 55-62-63 | Control | 55 | N_Purchases | 0.0 |
+| 55-62-63 | Guilt   | 62 | N_Purchases | 0.0 |
+| 55-62-63 | Shame   | 63 | N_Purchases | 1.0 |
+| 55-62-63 | Control | 55 | Excitement  | 0.0 
+
+# VI. Changelog
 
 ## 1.1.2: Master
 * Fixed a bug that could cause the "maxvar" initialization procedure to crash
@@ -152,13 +251,9 @@ Under the hood, pysprite will:
 * Support for scales of one item only.
 
 
-# V. Development
+# VII. Development
 
-## 1. Up-and-coming features
-
-* Support for composite scale scores
-
-## 2. Running tests
+## 1. Running tests
 
 ````cmd
 pip install pytest

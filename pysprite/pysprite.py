@@ -1,7 +1,11 @@
 import numpy as np
 import math
 from fractions import Fraction
-
+from itertools import product
+from warnings import warn, catch_warnings, simplefilter
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def deviation(data, u):
     return (sum([(i - u) ** 2 for i in data]) / (len(data) - 1)) ** .5
@@ -17,23 +21,175 @@ def dict_to_array(dicti):
     counts = [i for _, i in dicti.items()]
     return np.repeat(vals, counts)
 
-
-def deviation(data, u):
-    return (sum([(i - u) ** 2 for i in data]) / (len(data) - 1)) ** .5
-
-def dict_to_array(dicti):
+def grim(n, mu, prec=2, n_items=1):
     """
-    A utility function to convert dictionaries into arrays
-    :param dicti: A dictionary of {value: n_occurrences}
-    :return: An array of values
+    Test that a mean mu reported with a decimal precision prec is possible, given a number of observations n and a
+     number of items n_items.
+    :param n: The number of observations
+    :param mu: The mean
+    :param prec: The precision (i.e., number of decimal places) of the mean
+    :param n_items: The number of scale items that were averaged. Default is 1.
+    :return: True if the mean is possible, False otherwise.
     """
-    vals = [i for i in dicti.keys()]
-    counts = [i for _, i in dicti.items()]
-    return np.repeat(vals, counts)
+    if n*n_items >= 10**prec:
+        warn("The effective number of data points is such that GRIM will always find a solution.")
+    cval = np.round(mu * n * n_items, 0)
+    valid = np.round(cval/n/n_items, prec) == np.round(mu, prec)
+    return valid
+
+
+class GrimSearch:
+    def __init__(self, n, mus, precs, n_items, max_diff=None, varnames=None, cellnames=None):
+        """
+        A GrimSearch object, that can be used to find possible combinations of cell sizes.
+        :param n: The total number of observations, across all cells
+        :param mus: A J x K matrix of means, where
+            J is the number of cells
+            K is the number of variables.
+        :param precs: A K-length vector specifying the decimal precision of each mean.
+        :param n_items: A K-length vector specifying how many items were averaged to form the mean.
+        :param max_diff: The maximum difference in number of observations between two cells. Can be used to narrow down
+        the possible cell sizes to check.
+        """
+        self.N = n
+        self.mus = np.array(mus)
+        self.n_items = np.array(n_items)
+        self.precs = precs
+        self._j = self.mus.shape[0]
+        self._k = self.mus.shape[1]
+
+        if varnames is None:
+            self.varnames = [i for i in range(0, self._k)]
+        else:
+            self.varnames = varnames
+        if cellnames is None:
+            self.cellnames = [i for i in range(0, self._j)]
+        else:
+            self.cellnames = cellnames
+
+        if max_diff:
+            avg_n_per_cell = int(np.round(self.N / self._j, 0))
+            min_n_per_cell = max(1, avg_n_per_cell - int(np.round(max_diff / 2)))
+            max_n_per_cell = min(self.N, avg_n_per_cell + int(np.round(max_diff / 2)))
+        else:
+            min_n_per_cell = 1
+            max_n_per_cell = self.N
+        self._n_range = list(np.arange(min_n_per_cell, max_n_per_cell))
+        n_combs = len(self._n_range) ** self._j
+        if n_combs > 200:
+            warn(
+                f"The number of candidate cell sizes is very large (N = {n_combs}). You might want to set the max_diff parameter to a smaller value.")
+            self._test_set = None
+        else:
+            self._test_set = self._build_test_set()
+        self._grim_results = None
+
+    def _build_test_set(self):
+        """
+        Build the set of cell sizes combinations to test.
+        :return: An N x J matrix describing the combinations and the size of each cell
+        """
+        test_set = np.array(list(filter(lambda x: np.sum(x) == self.N, list(product(*[self._n_range] * self._j)))))
+        return test_set
+
+    def _apply_grim_to_test_sets(self):
+        if self._test_set is None:
+            self._test_set = self._build_test_set()
+        n_tests = self._test_set.shape[0]
+        grim_results = np.empty((n_tests, self._j, self._k))
+        with catch_warnings():
+            simplefilter("ignore")
+            for i, ns in enumerate(self._test_set):
+                for j, (n, mu) in enumerate(zip(ns, self.mus)):
+                    grim_results[i, j, :] = [grim(n, m, p, n_it) for m, p, n_it in zip(mu, self.precs, self.n_items)]
+        return grim_results
+
+    def find_solutions(self):
+        """
+        Find possible cell size combinations.
+        :return: A list of possible cell size combinations
+        """
+        if self._grim_results is None:
+            self._grim_results = self._apply_grim_to_test_sets()
+        n_grim_passed = self._grim_results.sum(axis=(1, 2))
+        solutions = self._test_set[n_grim_passed == (self._j * self._k), :]
+        return solutions
+
+    def get_n_valid_means(self):
+        """
+        Return the number of valid means, for each cell size combinations.
+        :return:
+        """
+        if self._grim_results is None:
+            self._grim_results = self._apply_grim_to_test_sets()
+        n_valids = self._grim_results.sum(axis=(1, 2))
+        index = ["-".join([str(i) for i in t]) for t in self._test_set]
+        return pd.Series(n_valids, index=index)
+
+    def summarize_grim_checks(self):
+        """
+        Return the number of valid means, for each cell size combinations.
+        :return:
+        """
+        if self._grim_results is None:
+            self._grim_results = self._apply_grim_to_test_sets()
+        values = self._grim_results.reshape(-1)
+        ns = np.tile(self._test_set, (1, self._k)).reshape(-1)
+        sample = np.repeat(["-".join([str(i) for i in t]) for t in self._test_set], self._j * self._k)
+        variable = np.tile(np.repeat(self.varnames, self._j), len(self._test_set))
+        cell = np.tile(self.cellnames, self._k * len(self._test_set))
+        return pd.DataFrame({"Combination": sample, "Cell": cell, "Cell N": ns, "Variable": variable, "Valid": values})
+
+    def plot_grim_checks(self, threshold=None, plot_kwargs=None,
+                         heatmap_kwargs=dict(square=False, linewidths=.5, cmap="Blues")):
+        """
+        :param threshold: Will exclude any sample size combination that gives less than this number of valid means
+        :param plot_kwargs: The kwargs to pass to plt.subplots
+        :param heatmap_kwargs: The kwargs to pass to sns.heatmap.
+        :return:
+        """
+        if self._grim_results is None:
+            self._grim_results = self._apply_grim_to_test_sets()
+        if threshold:
+            mask = self._grim_results.sum(axis=(1, 2)) >= threshold
+            grim_results = self._grim_results[mask]
+            test_set = self._test_set[mask]
+        else:
+            grim_results = self._grim_results
+            test_set = self._test_set
+        if plot_kwargs is None:
+            plot_kwargs = {}
+        if heatmap_kwargs is None:
+            heatmap_kwargs = {}
+        n_cells = self._j
+        fig, axes = plt.subplots(n_cells, 1, **plot_kwargs)
+        for i, ax in enumerate(axes):
+            cell_sizes = test_set[:, i]
+            solutions = grim_results[:, i, :]
+            sns.heatmap(solutions.T, ax=ax, cbar=False, vmin=0, vmax=1, **heatmap_kwargs)
+            ax.set_xticks(np.arange(0.5, len(cell_sizes) + 0.5))
+            ax.set_xticklabels(cell_sizes)
+            ax.set_yticklabels(self.varnames, rotation="horizontal")
+            ax.set_title(self.cellnames[i])
+        plt.tight_layout()
+        return fig, ax
+
 
 class Sprite:
     def __init__(self, n, mu, sd, mu_prec, sd_prec, min_val, max_val, restrictions=None, n_items=1):
+        """
+        Initialize a Sprite object, that can be used to generate candidate distributions.
 
+        :param n: The number of observations
+        :param mu: The mean value
+        :param sd: The standard deviation
+        :param mu_prec: The precision (i.e., number of decimal places) of the mean
+        :param sd_prec: The precision (i.e., number of decimal places) of the standard deviation
+        :param min_val: The minimum value of the scale
+        :param max_val: The maximum value of the scale
+        :param restrictions: A dictionary {value: counts} specifying the number of observations counts that take the value value
+        :param n_items: The number of scale items that were averaged. Default is 1.
+        """
         # Encode the restrictions
         if restrictions is not None:
             self._has_restrictions = True
@@ -62,7 +218,6 @@ class Sprite:
         elif n_items == 2:
             self.granularity = 1 / n_items
             self.scale = list(np.arange(min_val, max_val + self.granularity, self.granularity))
-
         else:
             self.granularity = Fraction(1, n_items)  # Fractions to avoid precision errors. Slower but failsafe.
             self.scale = list(np.arange(min_val, max_val + self.granularity, self.granularity))
@@ -176,8 +331,9 @@ class Sprite:
         r = np.arange(n)
         while sum(dist) != target_sum:
             ix = np.random.choice(r)
-            if (dist[ix] + self.granularity) <= maxscale:
-                dist[ix] = dist[ix] + self.granularity
+            newval = dist[ix] + self.granularity
+            if (newval) <= maxscale:
+                dist[ix] = newval
         return self._array_to_dict(dist)
 
     def _init_minvar_data(self, l_bound, u_bound):
@@ -553,9 +709,9 @@ class Sprite:
 
 if __name__ == "__main__":
 
-    npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items, method = [40, 4.85, 2.73, 2, 2, 0, 9, 1, 'random']
-    npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items, method = [38, 4.85, 2.73, 2, 2, 0, 9, 3, 'random']
-    s = Sprite(npart, m, sd, m_prec, sd_prec, min_val, max_val, n_items=n_items)
+    npart, mu, sd, m_prec, sd_prec, min_val, max_val, n_items, method = [40, 4.85, 2.73, 2, 2, 0, 9, 1, 'random']
+    npart, mu, sd, m_prec, sd_prec, min_val, max_val, n_items, method = [38, 4.85, 2.73, 2, 2, 0, 9, 3, 'random']
+    s = Sprite(npart, mu, sd, m_prec, sd_prec, min_val, max_val, n_items=n_items)
     results = s.find_possible_distribution(init_method=method)
 
     print(results)
