@@ -16,7 +16,7 @@ setup(
 
     description="A Python 3 re-implementation of Heathers, Anaya, van der Zee, and Brown's 'Sample Parameter Reconstruction via Iterative TEchniques (SPRITE)'",
 
-    long_description=open('README.md', encoding="utf-8").read(),
+    long_description="See package on GitHub: https://github.com/QuentinAndre/pysprite",
 
     install_requires=["numpy", "pandas", "matplotlib", "seaborn"],
 
