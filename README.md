@@ -1,5 +1,5 @@
 pysprite: A Python 3 Re-Implementation of Heathers et al. 'Sample Parameter Reconstruction via Iterative TEchniques (SPRITE)'
-===========================================================================
+==============================================================================================================================
 
 # I. Acknowledgments
 
