@@ -4,9 +4,8 @@ Core module
 """
 
 from .pysprite import Sprite
-from .psprite import SPRITE
 
-__all__ = ['Sprite', 'SPRITE']
-__version__ = "1.1.2"
+__all__ = ['Sprite']
+__version__ = "1.2.0"
 
 

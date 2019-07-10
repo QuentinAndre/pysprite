@@ -1,4 +1,4 @@
-from pysprite import Sprite, SPRITE
+from pysprite import Sprite
 import pytest
 import numpy as np
 
